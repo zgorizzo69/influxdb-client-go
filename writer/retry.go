@@ -44,6 +44,7 @@ func NewRetryWriter(w MetricsWriter, opts ...RetryOption) *RetryWriter {
 
 // Write delegates to underlying MetricsWriter and then
 // automatically retries when errors occur
+// note: this does not pass/fail atomically.
 func (r *RetryWriter) Write(m ...influxdb.Metric) (n int, err error) {
 	for i := 0; i < r.maxAttempts; i++ {
 		n, err = r.MetricsWriter.Write(m...)
@@ -71,6 +72,21 @@ func (r *RetryWriter) Write(m ...influxdb.Metric) (n int, err error) {
 				// call sleep with backoff duration
 				r.sleep(duration)
 			}
+		case influxdb.ETooLarge:
+			if len(m) < 2 {
+				return n, ierr
+			}
+			// here we have to make the object we send smaller.
+			firstN, secondN := 0, 0
+			firstN, firstErr := r.Write(m[:len(m)/2]...)
+			if firstErr != nil {
+				return firstN, firstErr
+			}
+			secondN, secondErr := r.Write(m[len(m)/2:]...)
+			if firstErr != nil {
+				return firstN + secondN, secondErr
+			}
+
 		default:
 			return
 		}

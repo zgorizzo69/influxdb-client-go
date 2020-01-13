@@ -18,6 +18,7 @@ const (
 	ETooManyRequests     = "too many requests"
 	EUnauthorized        = "unauthorized"
 	EMethodNotAllowed    = "method not allowed"
+	ETooLarge            = "request too large"
 )
 
 // ErrUnimplemented is an error for when pieces of the client's functionality is unimplemented.
